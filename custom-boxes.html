@@ -390,10 +390,10 @@
               Select Order Quantity (Units):
             </label>
             <input type="number" class="bs-input" id="bs-qty" placeholder="Quantity (e.g. 500)" min="50" value="500" style="font-size: 1.1rem; padding: 14px; width: 100%; border-radius: 12px;" />
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button type="button" class="btn-preset-pill" onclick="document.getElementById('bs-qty').value=100; if(window.buildPreviewStep5) buildPreviewStep5();" style="padding: 6px 12px; font-size: 0.78rem;">100 units (10% OFF)</button>
-              <button type="button" class="btn-preset-pill" onclick="document.getElementById('bs-qty').value=500; if(window.buildPreviewStep5) buildPreviewStep5();" style="padding: 6px 12px; font-size: 0.78rem;">500 units (25% OFF)</button>
-              <button type="button" class="btn-preset-pill" onclick="document.getElementById('bs-qty').value=1000; if(window.buildPreviewStep5) buildPreviewStep5();" style="padding: 6px 12px; font-size: 0.78rem; background: rgba(214,138,69,0.3); border-color: var(--orange);">1,000 units (35% OFF 🔥)</button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="qty-presets-container">
+              <button type="button" class="btn-preset-pill" data-qty="100" onclick="document.getElementById('bs-qty').value=100; if(window.buildPreviewStep5) buildPreviewStep5();" style="padding: 6px 12px; font-size: 0.78rem;">100 units (10% OFF)</button>
+              <button type="button" class="btn-preset-pill" data-qty="500" onclick="document.getElementById('bs-qty').value=500; if(window.buildPreviewStep5) buildPreviewStep5();" style="padding: 6px 12px; font-size: 0.78rem;">500 units (25% OFF)</button>
+              <button type="button" class="btn-preset-pill" data-qty="1000" onclick="document.getElementById('bs-qty').value=1000; if(window.buildPreviewStep5) buildPreviewStep5();" style="padding: 6px 12px; font-size: 0.78rem;">1,000 units (35% OFF 🔥)</button>
             </div>
           </div>
 
@@ -838,6 +838,19 @@
 
     // Update 3D box visual
     update3DBuilderBox(l, w, h, mat);
+
+    // Sync active state of quantity preset buttons
+    const presetsContainer = document.getElementById('qty-presets-container');
+    if (presetsContainer) {
+      presetsContainer.querySelectorAll('.btn-preset-pill').forEach(btn => {
+        const btnQty = parseFloat(btn.getAttribute('data-qty'));
+        if (btnQty === qty) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
   }
   window.buildPreviewStep5 = buildPreviewStep5;
 

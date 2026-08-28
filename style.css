@@ -3706,4 +3706,10 @@ input:checked + .slider-round:before {
   border-color: var(--orange);
   color: #FFFFFF !important;
 }
+.btn-preset-pill.active {
+  background: rgba(214, 138, 69, 0.35) !important;
+  border-color: var(--orange) !important;
+  box-shadow: 0 0 10px rgba(214, 138, 69, 0.2);
+}
+
 
