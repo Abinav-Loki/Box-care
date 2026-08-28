@@ -514,9 +514,8 @@
   </div>
 </header>
 
-<!-- Breadcrumbs -->
 <div class="breadcrumbs-container">
-  <div class="container">
+  <div class="container" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
     <div class="breadcrumbs">
       <a href="index.html">Home</a>
       <span class="separator">/</span>
@@ -524,19 +523,19 @@
       <span class="separator">/</span>
       <span class="current" id="breadcrumb-product-name">Flap Mailer Box</span>
     </div>
+    <div class="back-to-categories-wrap" style="margin: 0 !important;">
+      <button onclick="history.back()" class="back-category-btn" style="padding: 5px 12px !important; font-size: 0.78rem !important; border-radius: 8px !important;">
+        <i data-lucide="arrow-left" style="width: 12px; height: 12px; stroke-width: 2.5px;"></i>
+        <span>Back</span>
+      </button>
+    </div>
   </div>
 </div>
 
 <!-- PRODUCT DETAILED VIEW -->
 <section class="detail-section">
   <div class="container">
-    <!-- Back button -->
-    <div class="back-to-categories-wrap">
-      <button onclick="history.back()" class="back-category-btn">
-        <i data-lucide="arrow-left"></i>
-        <span>Back</span>
-      </button>
-    </div>
+    
 
     <!-- Main product detailed layout -->
     <div class="detail-grid" id="product-detail-container">

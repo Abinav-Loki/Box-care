@@ -1814,7 +1814,7 @@ svg { display: block; }
 
 /* Catalog General Layout */
 .catalog-section {
-  padding: 20px 0 88px 0 !important;
+  padding: 30px 0 88px 0;
   background: var(--beige);
 }
 .catalog-title-block {
@@ -3712,13 +3712,12 @@ input:checked + .slider-round:before {
   box-shadow: 0 0 10px rgba(214, 138, 69, 0.2);
 }
 
-/* Styled Back Button & Spacing Adjustments */
+/* Styled Back Button & Spacing Adjustments inside Breadcrumbs Row */
 .back-to-categories-wrap {
-  margin-top: -28px !important;  /* Shifts the back button further upwards to close the gap */
-  margin-bottom: 16px !important;
+  margin: 0 !important;
 }
 .detail-section {
-  padding-top: 20px !important;
+  padding-top: 30px;
 }
 .back-category-btn {
   display: inline-flex !important;
