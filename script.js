@@ -97,10 +97,65 @@ document.addEventListener('DOMContentLoaded', () => {
       return all;
     }
 
+    const isHomePage = !!document.getElementById('home');
+    const homeSearchResults = document.getElementById('home-search-results');
+
+    function toggleHomeSearchMode(active) {
+      if (!homeSearchResults) return;
+      const homeSections = [
+        document.getElementById('home'),
+        document.getElementById('products'),
+        document.getElementById('industries'),
+        document.getElementById('accessories'),
+        document.getElementById('all-products'),
+        document.getElementById('builder'),
+        document.getElementById('quote'),
+        document.getElementById('footer')
+      ].filter(Boolean);
+
+      if (active) {
+        homeSections.forEach(sec => sec.style.display = 'none');
+        homeSearchResults.style.display = 'block';
+      } else {
+        homeSections.forEach(sec => sec.style.display = '');
+        homeSearchResults.style.display = 'none';
+      }
+    }
+
+    if (homeSearchResults) {
+      homeSearchResults.addEventListener('click', (e) => {
+        // Prevent click inside search results from closing the search mode
+        e.stopPropagation();
+      });
+
+      const closeSearchBtn = document.getElementById('close-search-results-btn');
+      if (closeSearchBtn) {
+        closeSearchBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          searchInput.value = '';
+          searchBar.classList.remove('open');
+          toggleHomeSearchMode(false);
+        });
+      }
+
+      const clearSearchEmptyBtn = document.getElementById('clear-search-empty-btn');
+      if (clearSearchEmptyBtn) {
+        clearSearchEmptyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          searchInput.value = '';
+          searchInput.focus();
+          updateLiveSearch();
+        });
+      }
+    }
+
     function updateLiveSearch() {
       const query = searchInput.value.trim().toLowerCase();
       if (!query) {
         searchDropdown.style.display = 'none';
+        if (isHomePage) {
+          toggleHomeSearchMode(false);
+        }
         return;
       }
 
@@ -111,18 +166,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return p.name.toLowerCase().includes(query)
           || sizeStr.includes(query)
           || catStr.includes(query);
-      }).slice(0, 8); // limit to 8 results for the dropdown
+      });
 
-      if (filtered.length === 0) {
-        searchDropdown.innerHTML = `
-          <div style="text-align:center; padding:30px 10px;">
-            <p style="font-size:0.9rem; color:var(--charcoal-xlt);">No products found for "${query}"</p>
-          </div>
-        `;
-      } else {
-        searchDropdown.innerHTML = `
-          <div class="search-dropdown-grid">
-            ${filtered.map(p => {
+      if (isHomePage) {
+        searchDropdown.style.display = 'none';
+        toggleHomeSearchMode(true);
+
+        const searchGrid = document.getElementById('home-search-grid');
+        const searchEmpty = document.getElementById('home-search-empty');
+        const searchTitle = document.getElementById('home-search-title');
+
+        if (searchTitle) {
+          searchTitle.textContent = `Search Results for "${searchInput.value.trim()}"`;
+        }
+
+        if (filtered.length === 0) {
+          if (searchGrid) searchGrid.style.display = 'none';
+          if (searchEmpty) searchEmpty.style.display = 'block';
+        } else {
+          if (searchEmpty) searchEmpty.style.display = 'none';
+          if (searchGrid) {
+            searchGrid.style.display = 'grid';
+            searchGrid.innerHTML = filtered.map(p => {
               const isItemInStock = p.inStock;
               const buttonText = isItemInStock ? 'Quick Add' : 'Out Of Stock';
               const buttonDisabled = isItemInStock ? '' : 'disabled style="background:var(--beige-xdk); cursor:not-allowed; box-shadow:none"';
@@ -130,27 +195,94 @@ document.addEventListener('DOMContentLoaded', () => {
               // Fallback SVG logic for image
               let imgContent = p.image 
                 ? `<img src="${p.image}" alt="${p.name}" class="catalog-prod-img" loading="lazy" />`
-                : (typeof getProductSvg === 'function' ? getProductSvg(p, 'mailer-boxes') : '<div style="width:100%;height:100%;background:#eee;"></div>');
+                : (typeof getProductSvg === 'function' ? getProductSvg(p, p.category || 'mailer-boxes') : '<div style="width:100%;height:100%;background:#eee;"></div>');
 
               return `
-                <div class="catalog-prod-card" style="margin-bottom:0;" id="live-card-${p.id}">
+                <div class="catalog-prod-card" id="home-search-card-${p.id}">
                   <span class="discount-badge">${p.discount || ''}</span>
                   <div class="img-container" style="cursor:pointer" onclick="window.location.href='product-detail?id=${p.id}'">
                     ${imgContent}
                   </div>
                   <div class="info-container">
+                    <div class="rating">
+                      <i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i>
+                      <span>(${p.reviews || 85})</span>
+                    </div>
                     <h3 class="size-name" style="cursor:pointer" onclick="window.location.href='product-detail?id=${p.id}'">${p.name}</h3>
                     <div class="price-starts">
                       Starts From: <strong>₹ ${(p.minPrice || 0).toFixed(2)} - ₹ ${(p.maxPrice || 0).toFixed(2)}</strong>
                     </div>
+                    <button class="quick-add-btn add-home-search-cart-btn" data-name="${p.name}" data-price="${Math.round(p.minPrice)}" ${buttonDisabled}>
+                      ${buttonText}
+                    </button>
                   </div>
                 </div>
               `;
-            }).join('')}
-          </div>
-        `;
+            }).join('');
+
+            // Wire up quick add buttons
+            const addCartBtns = searchGrid.querySelectorAll('.add-home-search-cart-btn');
+            addCartBtns.forEach(btn => {
+              btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (btn.hasAttribute('disabled')) return;
+                const name = btn.getAttribute('data-name');
+                const price = parseInt(btn.getAttribute('data-price'));
+
+                if (typeof cart !== 'undefined') {
+                  const existingItem = cart.find(item => item.name === name);
+                  if (existingItem) {
+                    existingItem.quantity += 1;
+                  } else {
+                    cart.push({ name, price, quantity: 1 });
+                  }
+                  if (typeof updateCartUI === 'function') updateCartUI();
+                  if (typeof showToast === 'function') showToast(`${name} added to cart!`);
+                }
+              });
+            });
+
+            if (window.lucide) {
+              window.lucide.createIcons();
+            }
+          }
+        }
+      } else {
+        const slicedFiltered = filtered.slice(0, 8); // limit to 8 results for the dropdown
+        if (slicedFiltered.length === 0) {
+          searchDropdown.innerHTML = `
+            <div style="text-align:center; padding:30px 10px;">
+              <p style="font-size:0.9rem; color:var(--charcoal-xlt);">No products found for "${query}"</p>
+            </div>
+          `;
+        } else {
+          searchDropdown.innerHTML = `
+            <div class="search-dropdown-grid">
+              ${slicedFiltered.map(p => {
+                let imgContent = p.image 
+                  ? `<img src="${p.image}" alt="${p.name}" class="catalog-prod-img" loading="lazy" />`
+                  : (typeof getProductSvg === 'function' ? getProductSvg(p, p.category || 'mailer-boxes') : '<div style="width:100%;height:100%;background:#eee;"></div>');
+
+                return `
+                  <div class="catalog-prod-card" style="margin-bottom:0;" id="live-card-${p.id}">
+                    <span class="discount-badge">${p.discount || ''}</span>
+                    <div class="img-container" style="cursor:pointer" onclick="window.location.href='product-detail?id=${p.id}'">
+                      ${imgContent}
+                    </div>
+                    <div class="info-container">
+                      <h3 class="size-name" style="cursor:pointer" onclick="window.location.href='product-detail?id=${p.id}'">${p.name}</h3>
+                      <div class="price-starts">
+                        Starts From: <strong>₹ ${(p.minPrice || 0).toFixed(2)} - ₹ ${(p.maxPrice || 0).toFixed(2)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        }
+        searchDropdown.style.display = 'block';
       }
-      searchDropdown.style.display = 'block';
     }
 
     searchInput.addEventListener('input', updateLiveSearch);
@@ -158,6 +290,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', () => {
       if (searchDropdown) searchDropdown.style.display = 'none';
       if (searchBar) searchBar.classList.remove('open');
+      if (isHomePage) {
+        searchInput.value = '';
+        toggleHomeSearchMode(false);
+      }
     });
 
     // Close search on Escape key
@@ -165,6 +301,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.key === 'Escape' && searchBar.classList.contains('open')) {
         searchBar.classList.remove('open');
         if (searchDropdown) searchDropdown.style.display = 'none';
+        if (isHomePage) {
+          searchInput.value = '';
+          toggleHomeSearchMode(false);
+        }
       }
     });
 
@@ -172,7 +312,9 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const query = searchInput.value.trim();
-        if (document.getElementById('catalog-products-grid')) {
+        if (isHomePage) {
+          searchInput.blur();
+        } else if (document.getElementById('catalog-products-grid')) {
           filterAndRender();
           searchInput.blur();
         } else if (document.getElementById('dynamic-products-grid')) {
@@ -201,6 +343,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (catalogSearchInput) {
         catalogSearchInput.value = searchParam;
       }
+      // Trigger search rendering on load
+      updateLiveSearch();
     }
   }
 
@@ -1071,8 +1215,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Mailer Boxes',
       heading: 'Mailer Boxes',
       subheading: 'Corrugated mailer boxes – direct from the manufacturer',
-      desc1: 'Looking for a strong, courier-ready mailer box? As a mailer box manufacturer, Box Care makes corrugated mailer boxes that fold flat, lock without tape, and survive the journey to your customer. Buy plain or custom mailer boxes in popular e-commerce sizes, with wholesale pricing on bulk packs and a GST invoice on every order.',
-      desc2: 'Our mailer box packaging suits D2C brands, apparel, beauty and subscription boxes - anywhere the unboxing matters. Choose natural kraft for an eco look or printed mailer boxes to put your brand on every parcel. Need a size we don\'t stock? We make custom mailer boxes to your dimensions and print.',
+      desc1: '',
+      desc2: '',
       cta: 'Order mailer boxes wholesale, factory direct, with same-day dispatch before 2 PM and free shipping across India. For bulk or custom mailer box quotes, message +91 78638 59919.',
       faqs: [
         { q: 'Do these mailer boxes require tape to assemble?', a: 'No! Our mailer boxes feature an interlocking flap design. They lock securely in place without tape or glue, creating a clean, high-end unboxing presentation for your customers.' },
@@ -1108,8 +1252,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Corrugated Boxes',
       heading: 'Corrugated Boxes',
       subheading: 'Premium shipping cartons & cardboard boxes direct from manufacturer',
-      desc1: 'Discover high-strength corrugated boxes designed to protect your goods during heavy logistics and transits. Ideal for industrial shipping, bulk warehousing, and logistics, our 3-ply and 5-ply cartons offer exceptional burst strength.',
-      desc2: 'Customize your dimensions, paper grades, and printing options. Enjoy wholesale factory prices and same-day dispatch on stock sizes.',
+      desc1: '',
+      desc2: '',
       cta: 'Buy corrugated boxes direct with GST invoice and bulk discounts. For bulk custom carton requests, call +91 78638 59919.',
       faqs: [
         { q: 'What is the difference between 3-ply and 5-ply boxes?', a: '3-ply boxes feature three layers of paper (two liners and one inner fluting layer) suitable for items under 10 kg. 5-ply boxes have five layers (three liners and two flutings) suitable for heavier loads up to 25 kg.' },
@@ -1131,8 +1275,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Shipping Boxes',
       heading: 'Shipping Boxes',
       subheading: 'Premium cardboard shipping cartons directly from the manufacturer',
-      desc1: 'Designed for logistics, e-commerce fulfillment, and everyday mailing. Our standard shipping boxes are built to exact courier and postage limits, ensuring minimal shipping weight and volume.',
-      desc2: 'With standard brown kraft outer look, these boxes are ready for fast-moving packing stations.',
+      desc1: '',
+      desc2: '',
       cta: 'Free shipping on orders above ₹2,000. Contact our team at hello@boxcare.in for bulk customs.',
       faqs: [
         { q: 'Are these sizes compliant with Amazon/Flipkart guidelines?', a: 'Yes, our shipping boxes conform to the standard size classes used by top e-commerce platforms and courier networks (DHL, BlueDart, FedEx).' },
@@ -1152,8 +1296,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Pizza Boxes',
       heading: 'Pizza Boxes',
       subheading: 'Ventilated, heat-retaining food-grade pizza boxes',
-      desc1: 'Keep your pizzas fresh, hot, and crispy during home delivery. Our pizza boxes are made from certified food-grade, odor-free virgin kraft paper, featuring ventilation holes to prevent steam condensation.',
-      desc2: 'Sturdy design prevents top-box collapse when stacked in delivery bags.',
+      desc1: '',
+      desc2: '',
       cta: 'Bulk order food packaging with customized prints. For custom print queries, text +91 78638 59919.',
       faqs: [
         { q: 'Are these pizza boxes certified food-safe?', a: 'Yes! We use 100% food-grade virgin paper and FDA-approved starch adhesive. Our boxes do not transfer chemicals or odors to the food.' },
@@ -1174,8 +1318,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Mono Cartons',
       heading: 'Mono Cartons',
       subheading: 'Premium single-ply paperboard packaging sleeves & cosmetic cartons',
-      desc1: 'Elevate your retail shelf presence with custom mono cartons. Made from premium SBS duplex board, they are perfect for cosmetics, perfumes, pharma products, electronics, and specialty foods.',
-      desc2: 'Supports premium finishing techniques such as spot UV, hot foil stamping, and matte/gloss lamination.',
+      desc1: '',
+      desc2: '',
       cta: 'Request physical paperboard material samples directly via hello@boxcare.in.',
       faqs: [
         { q: 'What paper grades do you use for retail cartons?', a: 'We use high-grade Solid Bleached Sulfate (SBS), folding boxboard (FBB), and white-back duplex boards ranging from 250 GSM to 400 GSM.' },
@@ -1194,8 +1338,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Courier Bags',
       heading: 'Courier Bags',
       subheading: 'Premium self-adhesive tamper-proof courier mailers & poly bags',
-      desc1: 'Secure your clothing and soft-goods logistics with tamper-evident courier bags. Featuring hot-melt adhesive flaps that cannot be opened without tearing, these bags prevent pilferage during transport.',
-      desc2: 'Includes POD transparent jacket sleeve on the back for shipping labels and invoices.',
+      desc1: '',
+      desc2: '',
       cta: 'Buy high-strength LDPE mailing bags wholesale. Bulk inquiries: message +91 78638 59919.',
       faqs: [
         { q: 'What is a POD jacket courier bag?', a: 'A POD jacket is a clear plastic pocket on the back of the envelope. You can easily slip shipping documents, invoices, and shipping labels inside.' },
@@ -1215,8 +1359,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Paper Bags',
       heading: 'Paper Bags',
       subheading: 'Premium twisted handle brown & white kraft paper bags',
-      desc1: 'Elevate your retail brand with zero-plastic packaging. Made from strong biodegradable kraft paper, our bags feature twisted paper handles and reinforced bottoms to hold heavy products.',
-      desc2: 'Perfect for retail outlets, gift shops, clothing brands, and bakery deliveries.',
+      desc1: '',
+      desc2: '',
       cta: 'Free shipping on orders above ₹2,000 across India. Customized offset printing available.',
       faqs: [
         { q: 'How much weight can these paper bags carry?', a: 'Depending on size, our twisted handle kraft paper bags can safely support weights between 3 kg and 7 kg due to their high-tensile base adhesive.' },
@@ -1235,8 +1379,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Tape Rolls',
       heading: 'Tape Rolls',
       subheading: 'Premium high-tack acrylic adhesive packaging tapes',
-      desc1: 'Seal your cartons with confidence. Our BOPP tapes feature premium high-tack acrylic adhesive layers that resist peeling, moisture, and extremes of Indian weather.',
-      desc2: 'Perfect for manual packaging stations and automatic box sealing machines.',
+      desc1: '',
+      desc2: '',
       cta: 'Stock sizes available for same-day dispatch before 2 PM. For bulk roll discounts, email sales@boxcare.in.',
       faqs: [
         { q: 'What is BOPP tape?', a: 'BOPP stands for Biaxially Oriented Polypropylene. It is a highly durable and strong plastic backing material coated with a specialized high-adhesion adhesive layer.' },
@@ -1255,8 +1399,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Bubble Wrap',
       heading: 'Bubble Wrap',
       subheading: 'High-cushioning protective bubble rolls & packing material',
-      desc1: 'Wrap fragile items, electronics, and glassware in high-cushion air bubble packaging. Our bubble sheets have resilient air pockets that absorb shocks and vibration during courier handling.',
-      desc2: 'Soft, clean, dust-free packaging protective wrap.',
+      desc1: '',
+      desc2: '',
       cta: 'Free shipping on orders above ₹2,000 across India. MOQ: 1 roll.',
       faqs: [
         { q: 'What GSM values do your bubble wrap rolls have?', a: 'Our standard protective bubble rolls range from 40 GSM (light protective cushion) to 80 GSM (heavy duty thick bubbles for exports).' },
@@ -1274,8 +1418,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Corrugated Rolls',
       heading: 'Corrugated Rolls',
       subheading: 'High-strength flexible corrugated cardboard wrapping rolls',
-      desc1: 'Flexible wrapping sheet made from premium corrugated fluted paper. Perfect for wrapping industrial parts, metal rods, wooden furniture legs, and odd-shaped heavy items before warehousing.',
-      desc2: 'High shock absorbance with eco-friendly biodegradable composition.',
+      desc1: '',
+      desc2: '',
       cta: 'Buy corrugated wrapping rolls wholesale. Custom width rolls available.',
       faqs: [
         { q: 'What is the fluting type on your corrugated rolls?', a: 'We use high-cushion "C-flute" corrugated rolls made from 120 GSM fluting paper for optimal packing flex and cushion.' }
@@ -1292,8 +1436,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Corrugated Sheets',
       heading: 'Corrugated Sheets',
       subheading: 'Premium cardboard separation sheets & partitions',
-      desc1: 'Provide strong layered support inside standard shipping cartons. Use corrugated flat sheets to separate rows of products, add vertical stack strength, or prevent item sliding.',
-      desc2: 'Available in 3-ply and 5-ply construction in various standardized layout dimensions.',
+      desc1: '',
+      desc2: '',
       cta: 'Free shipping on orders above ₹2,000 across India.',
       faqs: [
         { q: 'What can I use these cardboard sheets for?', a: 'They are perfect for layered partitions, photo backing, heavy envelope stiffness, crafting, and adding flat buffers inside larger cartons.' }
@@ -1310,8 +1454,8 @@ document.addEventListener('DOMContentLoaded', () => {
       breadcrumb: 'Custom Printed Boxes',
       heading: 'Custom Printed Boxes',
       subheading: 'Premium logo-printed custom packaging direct from manufacturer',
-      desc1: 'Transform your unpacking experience into a powerful branding tool. We print high-quality custom boxes with your logo, social handles, or artwork on premium corrugated box types.',
-      desc2: 'Supports eco-friendly kraft looks or full double-sided multi-color offset prints.',
+      desc1: '',
+      desc2: '',
       cta: 'Contact our product design team for digital mockups. Whatsapp +91 78638 59919.',
       faqs: [
         { q: 'What is the setup time for custom plates?', a: 'Custom printing plate setup takes 2 to 3 working days. Once approved, typical bulk print production runs take 5 to 7 days.' },
@@ -1733,54 +1877,90 @@ document.addEventListener('DOMContentLoaded', () => {
   const sliderTrack = document.querySelector('.range-slider-track');
   const priceApplyBtn = document.getElementById('price-apply-btn');
 
-  // Slider track color highlight update
+  // Slider track color highlight update — uses actual min/max bounds for correct percent
   function updateSliderTrack() {
     if (!priceMin || !priceMax || !sliderTrack) return;
-    const minVal = parseInt(priceMin.value);
-    const maxVal = parseInt(priceMax.value);
-    const minPercent = (minVal / priceMin.max) * 100;
-    const maxPercent = (maxVal / priceMax.max) * 100;
+    const absoluteMin = parseFloat(priceMin.min) || 0;
+    const absoluteMax = parseFloat(priceMin.max) || 1;
+    const range = absoluteMax - absoluteMin || 1;
+    const minVal = parseFloat(priceMin.value);
+    const maxVal = parseFloat(priceMax.value);
+    const minPercent = ((minVal - absoluteMin) / range) * 100;
+    const maxPercent = ((maxVal - absoluteMin) / range) * 100;
     sliderTrack.style.left = minPercent + '%';
     sliderTrack.style.right = (100 - maxPercent) + '%';
   }
 
-  // Bind range events
+  // Bind range events — priceMin/priceMax are the single source of truth
   if (priceMin && priceMax) {
+    // Dragging the MIN handle → update min input box + track
     priceMin.addEventListener('input', () => {
-      let minVal = parseInt(priceMin.value);
-      let maxVal = parseInt(priceMax.value);
-      if (minVal > maxVal - 5) {
-        priceMin.value = maxVal - 5;
-        minVal = maxVal - 5;
+      const absoluteMin = parseFloat(priceMin.min) || 0;
+      let minVal = parseFloat(priceMin.value);
+      let maxVal = parseFloat(priceMax.value);
+      const gap = Math.max(1, (parseFloat(priceMin.max) - absoluteMin) * 0.01);
+      if (minVal > maxVal - gap) {
+        minVal = maxVal - gap;
+        priceMin.value = minVal;
       }
-      priceInputMin.value = minVal;
+      if (priceInputMin) priceInputMin.value = Math.round(minVal);
       updateSliderTrack();
     });
 
+    // Dragging the MAX handle → update max input box + track
     priceMax.addEventListener('input', () => {
-      let minVal = parseInt(priceMin.value);
-      let maxVal = parseInt(priceMax.value);
-      if (maxVal < minVal + 5) {
-        priceMax.value = minVal + 5;
-        maxVal = minVal + 5;
+      const absoluteMin = parseFloat(priceMin.min) || 0;
+      let minVal = parseFloat(priceMin.value);
+      let maxVal = parseFloat(priceMax.value);
+      const gap = Math.max(1, (parseFloat(priceMin.max) - absoluteMin) * 0.01);
+      if (maxVal < minVal + gap) {
+        maxVal = minVal + gap;
+        priceMax.value = maxVal;
       }
-      priceInputMax.value = maxVal;
+      if (priceInputMax) priceInputMax.value = Math.round(maxVal);
       updateSliderTrack();
     });
 
-    priceInputMin.addEventListener('change', () => {
-      let val = Math.max(0, Math.min(parseInt(priceInputMin.value) || 0, parseInt(priceMax.value) - 5));
-      priceInputMin.value = val;
-      priceMin.value = val;
-      updateSliderTrack();
-    });
+    // Typing in the MIN input box → move MIN handle + update track
+    if (priceInputMin) {
+      priceInputMin.addEventListener('input', () => {
+        const absoluteMin = parseFloat(priceMin.min) || 0;
+        const absoluteMax = parseFloat(priceMin.max) || 1;
+        let val = parseFloat(priceInputMin.value);
+        if (isNaN(val)) return;
+        val = Math.max(absoluteMin, Math.min(val, parseFloat(priceMax.value) - 1));
+        priceMin.value = val;
+        updateSliderTrack();
+      });
+      priceInputMin.addEventListener('change', () => {
+        const absoluteMin = parseFloat(priceMin.min) || 0;
+        let val = parseFloat(priceInputMin.value) || absoluteMin;
+        val = Math.max(absoluteMin, Math.min(val, parseFloat(priceMax.value) - 1));
+        priceInputMin.value = Math.round(val);
+        priceMin.value = val;
+        updateSliderTrack();
+      });
+    }
 
-    priceInputMax.addEventListener('change', () => {
-      let val = Math.max(parseInt(priceMin.value) + 5, Math.min(parseInt(priceInputMax.value) || 0, parseInt(priceMax.max)));
-      priceInputMax.value = val;
-      priceMax.value = val;
-      updateSliderTrack();
-    });
+    // Typing in the MAX input box → move MAX handle + update track
+    if (priceInputMax) {
+      priceInputMax.addEventListener('input', () => {
+        const absoluteMax = parseFloat(priceMax.max) || 1;
+        let val = parseFloat(priceInputMax.value);
+        if (isNaN(val)) return;
+        val = Math.max(parseFloat(priceMin.value) + 1, Math.min(val, absoluteMax));
+        priceMax.value = val;
+        updateSliderTrack();
+      });
+      priceInputMax.addEventListener('change', () => {
+        const absoluteMax = parseFloat(priceMax.max) || 1;
+        let val = parseFloat(priceInputMax.value) || absoluteMax;
+        val = Math.max(parseFloat(priceMin.value) + 1, Math.min(val, absoluteMax));
+        priceInputMax.value = Math.round(val);
+        priceMax.value = val;
+        updateSliderTrack();
+      });
+    }
 
     updateSliderTrack();
   }
@@ -2154,11 +2334,20 @@ document.addEventListener('DOMContentLoaded', () => {
         (p.category && p.category.toLowerCase().includes(selectedCategory.toLowerCase()));
 
       // Search query filter
+      const sizeCleanIn = `${p.length_in}x${p.width_in}x${p.height_in}`.toLowerCase();
+      const sizeCleanInSpace = `${p.length_in} x ${p.width_in} x ${p.height_in}`.toLowerCase();
+      const sizeCleanCm = `${p.length_cm}x${p.width_cm}x${p.height_cm}`.toLowerCase();
+      const sizeCleanCmSpace = `${p.length_cm} x ${p.width_cm} x ${p.height_cm}`.toLowerCase();
+
       const matchesSearch = !query || 
         p.name.toLowerCase().includes(query) || 
         (p.category && p.category.toLowerCase().includes(query)) ||
         p.size_inches.toLowerCase().includes(query) || 
-        p.size_cm.toLowerCase().includes(query);
+        p.size_cm.toLowerCase().includes(query) ||
+        sizeCleanIn.includes(query) ||
+        sizeCleanInSpace.includes(query) ||
+        sizeCleanCm.includes(query) ||
+        sizeCleanCmSpace.includes(query);
       
       // Length filter
       const matchesLength = checkedLengths.length === 0 || checkedLengths.includes(p.length_in);
@@ -2270,6 +2459,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
 
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  function getUnitPriceForQty(q, product, scale = 1.0) {
+    const prices = product.prices;
+    if (!prices) return 10.0;
+    const keys = Object.keys(prices).map(Number).sort((a, b) => a - b);
+    if (keys.length === 0) return 10.0;
+
+    // Calculate base unit prices for standard tiers
+    const tiers = keys.map(k => ({ q: k, u: (prices[k] * scale) / k }));
+
+    if (q <= tiers[0].q) {
+      // For quantities below the first tier, add a premium
+      return tiers[0].u * 1.15;
+    }
+    if (q >= tiers[tiers.length - 1].q) {
+      return tiers[tiers.length - 1].u;
+    }
+
+    // Find the bounding tiers
+    for (let i = 0; i < tiers.length - 1; i++) {
+      const t1 = tiers[i];
+      const t2 = tiers[i+1];
+      if (q >= t1.q && q <= t2.q) {
+        // Linear interpolation of unit price
+        const ratio = (q - t1.q) / (t2.q - t1.q);
+        return t1.u + ratio * (t2.u - t1.u);
+      }
+    }
+    return tiers[tiers.length - 1].u;
   }
 
   // Dynamic Product Detail Page (product-detail.html)
@@ -2415,46 +2634,321 @@ document.addEventListener('DOMContentLoaded', () => {
       `).join('');
     }
 
-    // Size Information Table
-    const sizesBody = document.getElementById('sizes-table-body');
-    if (sizesBody) {
-      sizesBody.innerHTML = `
-        <tr>
-          <td>Inches (Imperial)</td>
-          <td>${product.length_in}″</td>
-          <td>${product.width_in}″</td>
-          <td>${product.height_in}″</td>
-        </tr>
-        <tr>
-          <td>Centimeters (Metric)</td>
-          <td>${product.length_cm} cm</td>
-          <td>${product.width_cm} cm</td>
-          <td>${product.height_cm} cm</td>
-        </tr>
-      `;
-    }
-
-    // Pricing Table
-    const pricesBody = document.getElementById('prices-table-body');
-    if (pricesBody && product.prices) {
-      pricesBody.innerHTML = Object.entries(product.prices).map(([packSize, price]) => `
-        <tr>
-          <td>Pack of ${packSize}</td>
-          <td class="price-col-highlight">₹${typeof price === 'number' ? price.toFixed(2) : price}</td>
-        </tr>
-      `).join('');
-    }
-
     // Action buttons WhatsApp & Quote link
     const quoteBtn = document.getElementById('request-quote-btn');
     const contactBtn = document.getElementById('contact-us-btn');
 
-    if (quoteBtn) {
-      quoteBtn.setAttribute('href', `custom-boxes.html?type=${product.categorySlug || 'mailer'}&length=${product.length_cm}&width=${product.width_cm}&height=${product.height_cm}`);
+    // Size Information Table & Editable Logic
+    const sizesBody = document.getElementById('sizes-table-body');
+    const pricesBody = document.getElementById('prices-table-body');
+    const origArea = 2 * (product.length_in * product.width_in + product.width_in * product.height_in + product.length_in * product.height_in);
+
+    function updatePricingAndCm() {
+      const editLength = document.getElementById('edit-length');
+      const editWidth = document.getElementById('edit-width');
+      const editHeight = document.getElementById('edit-height');
+
+      const l = parseFloat(editLength ? editLength.value : product.length_in) || 1;
+      const w = parseFloat(editWidth ? editWidth.value : product.width_in) || 1;
+      const h = parseFloat(editHeight ? editHeight.value : product.height_in) || 1;
+
+      // 1. Update CM displays
+      const l_cm = (l * 2.54).toFixed(2);
+      const w_cm = (w * 2.54).toFixed(2);
+      const h_cm = (h * 2.54).toFixed(2);
+      
+      const valLen = document.getElementById('val-length-cm');
+      const valWid = document.getElementById('val-width-cm');
+      const valHei = document.getElementById('val-height-cm');
+
+      if (valLen) valLen.textContent = `${l_cm} cm`;
+      if (valWid) valWid.textContent = `${w_cm} cm`;
+      if (valHei) valHei.textContent = `${h_cm} cm`;
+
+      // 2. Read Pack selection
+      const packSelect = document.getElementById('pack-size-select');
+      const customQtyInput = document.getElementById('custom-qty-input');
+      const customQtyContainer = document.getElementById('custom-qty-container');
+
+      let activeQty = 50;
+      let customMode = false;
+
+      if (packSelect) {
+        if (packSelect.value === 'custom') {
+          customMode = true;
+          if (customQtyContainer) customQtyContainer.style.display = 'block';
+          activeQty = parseInt(customQtyInput ? customQtyInput.value : 150) || 50;
+        } else {
+          customMode = false;
+          if (customQtyContainer) customQtyContainer.style.display = 'none';
+          activeQty = parseInt(packSelect.value) || 50;
+        }
+      }
+
+      // 3. Recalculate Prices
+      const newArea = 2 * (l * w + w * h + l * h);
+      const scale = newArea / origArea;
+
+      const renderedPrices = {};
+      const standardPacks = Object.keys(product.prices || {});
+      standardPacks.forEach(p => {
+        const origPrice = product.prices[p];
+        renderedPrices[p] = Math.max(origPrice * scale, 2.00 * parseInt(p));
+      });
+
+      let activePrice = 0;
+      if (customMode) {
+        const unitPrice = getUnitPriceForQty(activeQty, product, scale);
+        activePrice = activeQty * unitPrice;
+      } else {
+        activePrice = renderedPrices[activeQty] || 0;
+      }
+
+      // 4. Render prices table
+      if (pricesBody) {
+        let html = '';
+        standardPacks.forEach(p => {
+          const isSelected = !customMode && parseInt(p) === activeQty;
+          const styleAttr = isSelected ? 'style="background: rgba(139,94,60,0.08); font-weight: 600; border-left: 4px solid var(--brown); font-size: 0.9rem;"' : 'style="cursor: pointer;"';
+          html += `
+            <tr data-qty="${p}" class="price-row" ${styleAttr}>
+              <td>Pack of ${p} ${isSelected ? '✓' : ''}</td>
+              <td class="price-col-highlight">₹${renderedPrices[p].toFixed(2)}</td>
+            </tr>
+          `;
+        });
+
+        if (customMode) {
+          html += `
+            <tr class="price-row" style="background: rgba(214,138,69,0.08); font-weight: 600; border-left: 4px solid var(--orange); font-size: 0.9rem;">
+              <td>Pack of ${activeQty} (Custom) ✓</td>
+              <td class="price-col-highlight" style="color: var(--orange-dk);">₹${activePrice.toFixed(2)}</td>
+            </tr>
+          `;
+        }
+
+        pricesBody.innerHTML = html;
+
+        // Wire row click event listeners
+        pricesBody.querySelectorAll('.price-row[data-qty]').forEach(row => {
+          row.addEventListener('click', () => {
+            const q = row.getAttribute('data-qty');
+            if (packSelect) {
+              packSelect.value = q;
+              updatePricingAndCm();
+            }
+          });
+        });
+      }
+
+      // 5. Update titles & breadcrumbs
+      const pTitle = document.getElementById('product-title');
+      const baseName = product.name.replace(/\s*-\s*\d+(?:\.\d+)?\s*[xX]\s*\d+(?:\.\d+)?\s*[xX]\s*\d+(?:\.\d+)?\s*(?:Inch|inch)?/g, '');
+      if (pTitle) {
+        pTitle.textContent = `${baseName} - ${l}x${w}x${h} Inch`;
+      }
+      
+      const bcpName = document.getElementById('breadcrumb-product-name');
+      if (bcpName) {
+        bcpName.textContent = `${baseName} - ${l}x${w}x${h} Inch`;
+      }
+
+      // 6. Update action buttons
+      if (quoteBtn) {
+        quoteBtn.setAttribute('href', `custom-boxes.html?type=${product.categorySlug || 'mailer'}&length=${l_cm}&width=${w_cm}&height=${h_cm}&qty=${activeQty}`);
+      }
+
+      if (contactBtn) {
+        const updatedProd = {
+          ...product,
+          size_inches_short: `${l}x${w}x${h}`,
+          size_cm: `${l_cm} cm x ${w_cm} cm x ${h_cm} cm`
+        };
+        contactBtn.setAttribute('href', getWhatsAppUrl(updatedProd, activeQty, activePrice.toFixed(2)));
+      }
     }
 
-    if (contactBtn) {
-      contactBtn.setAttribute('href', getWhatsAppUrl(product, 50, product.prices ? product.prices["50"] : ""));
+    if (sizesBody) {
+      // Add standard size selection dropdown above the table
+      const tablesSection = sizesBody.closest('.tables-section');
+      if (tablesSection) {
+        let sizeSelectContainer = document.getElementById('standard-size-select-container');
+        if (!sizeSelectContainer) {
+          sizeSelectContainer = document.createElement('div');
+          sizeSelectContainer.id = 'standard-size-select-container';
+          sizeSelectContainer.style.marginBottom = '24px';
+          tablesSection.insertBefore(sizeSelectContainer, tablesSection.firstElementChild);
+        }
+
+        const catConfig = categoryConfigs[product.categorySlug];
+        if (catConfig && catConfig.products && catConfig.products.length > 1) {
+          sizeSelectContainer.innerHTML = `
+            <label for="standard-size-select" style="font-family: var(--font-head); font-weight: 700; font-size: 0.9rem; color: var(--charcoal); display: block; margin-bottom: 8px;">Select Standard Size:</label>
+            <select id="standard-size-select" style="width: 100%; padding: 12px 14px; border: 1px solid var(--beige-xdk); border-radius: var(--radius-xs); font-family: var(--font-head); font-weight: 600; color: var(--charcoal); cursor: pointer; background: var(--white); outline: none;">
+              ${catConfig.products.map(p => `
+                <option value="${p.id}" ${p.id === product.id ? 'selected' : ''}>
+                  ${p.name}
+                </option>
+              `).join('')}
+            </select>
+          `;
+          
+          const standardSizeSelect = document.getElementById('standard-size-select');
+          if (standardSizeSelect) {
+            standardSizeSelect.addEventListener('change', (e) => {
+              window.location.href = `product-detail?id=${e.target.value}`;
+            });
+          }
+        } else {
+          sizeSelectContainer.style.display = 'none';
+        }
+      }
+
+      // Populate Editable Sizes Table
+      sizesBody.innerHTML = `
+        <tr>
+          <td>Inches (Imperial)</td>
+          <td><input type="number" id="edit-length" value="${product.length_in}" step="0.1" min="0.5" style="width: 75px; padding: 6px 10px; border: 1px solid var(--beige-xdk); border-radius: 4px; font-weight: 600; text-align: center; color: var(--charcoal); outline: none; background: var(--white);"></td>
+          <td><input type="number" id="edit-width" value="${product.width_in}" step="0.1" min="0.5" style="width: 75px; padding: 6px 10px; border: 1px solid var(--beige-xdk); border-radius: 4px; font-weight: 600; text-align: center; color: var(--charcoal); outline: none; background: var(--white);"></td>
+          <td><input type="number" id="edit-height" value="${product.height_in}" step="0.1" min="0.5" style="width: 75px; padding: 6px 10px; border: 1px solid var(--beige-xdk); border-radius: 4px; font-weight: 600; text-align: center; color: var(--charcoal); outline: none; background: var(--white);"></td>
+        </tr>
+        <tr>
+          <td>Centimeters (Metric)</td>
+          <td id="val-length-cm">${product.length_cm} cm</td>
+          <td id="val-width-cm">${product.width_cm} cm</td>
+          <td id="val-height-cm">${product.height_cm} cm</td>
+        </tr>
+      `;
+
+      const editLength = document.getElementById('edit-length');
+      const editWidth = document.getElementById('edit-width');
+      const editHeight = document.getElementById('edit-height');
+
+      [editLength, editWidth, editHeight].forEach(input => {
+        if (input) {
+          input.addEventListener('input', updatePricingAndCm);
+          input.addEventListener('change', updatePricingAndCm);
+        }
+      });
+    }
+
+    // Add pack size selection dropdown above the pricing table
+    if (pricesBody) {
+      const pricingDiv = document.getElementById('pricing-table-wrap');
+      if (pricingDiv) {
+        let packSelectContainer = document.getElementById('pack-size-select-container');
+        if (!packSelectContainer) {
+          packSelectContainer = document.createElement('div');
+          packSelectContainer.id = 'pack-size-select-container';
+          packSelectContainer.style.marginBottom = '20px';
+          pricingDiv.insertBefore(packSelectContainer, pricingDiv.firstElementChild.nextElementSibling); // Insert after the h3 heading
+        }
+
+        const standardPacks = Object.keys(product.prices || {});
+        packSelectContainer.innerHTML = `
+          <div style="display: flex; gap: 16px; margin-bottom: 12px; align-items: flex-end;">
+            <div style="flex: 1;">
+              <label for="pack-size-select" style="font-family: var(--font-head); font-weight: 700; font-size: 0.9rem; color: var(--charcoal); display: block; margin-bottom: 6px;">Choose Pack Size:</label>
+              <select id="pack-size-select" style="width: 100%; padding: 10px 12px; border: 1px solid var(--beige-xdk); border-radius: var(--radius-xs); font-family: var(--font-head); font-weight: 600; color: var(--charcoal); cursor: pointer; background: var(--white); outline: none;">
+                ${standardPacks.map(p => `
+                  <option value="${p}">Pack of ${p}</option>
+                `).join('')}
+                <option value="custom">Custom Pack Size...</option>
+              </select>
+            </div>
+            <div id="custom-qty-container" style="flex: 1; display: none;">
+              <label for="custom-qty-input" style="font-family: var(--font-head); font-weight: 700; font-size: 0.9rem; color: var(--charcoal); display: block; margin-bottom: 6px;">Enter Custom Quantity:</label>
+              <input type="number" id="custom-qty-input" value="150" min="5" step="5" style="width: 100%; padding: 8px 12px; border: 1px solid var(--beige-xdk); border-radius: var(--radius-xs); font-family: var(--font-head); font-weight: 600; color: var(--charcoal); outline: none; background: var(--white);">
+            </div>
+          </div>
+        `;
+
+        const packSelect = document.getElementById('pack-size-select');
+        const customQtyInput = document.getElementById('custom-qty-input');
+
+        if (packSelect) {
+          packSelect.addEventListener('change', updatePricingAndCm);
+        }
+        if (customQtyInput) {
+          customQtyInput.addEventListener('input', updatePricingAndCm);
+        }
+      }
+    }
+
+    // Initialize/Render Prices
+    updatePricingAndCm();
+
+    // Add to Cart button
+    const addToCartBtn = document.getElementById('add-to-cart-btn');
+    if (addToCartBtn) {
+      addToCartBtn.addEventListener('click', () => {
+        // Get active pack size and price
+        const packSelect = document.getElementById('pack-size-select');
+        const customQtyInput = document.getElementById('custom-qty-input');
+
+        let activeQty = 50;
+        let customMode = false;
+
+        if (packSelect) {
+          if (packSelect.value === 'custom') {
+            customMode = true;
+            activeQty = parseInt(customQtyInput ? customQtyInput.value : 150) || 50;
+          } else {
+            activeQty = parseInt(packSelect.value) || 50;
+          }
+        }
+
+        // Get current dimension scale for price calculation
+        const editLength = document.getElementById('edit-length');
+        const editWidth = document.getElementById('edit-width');
+        const editHeight = document.getElementById('edit-height');
+        const l = parseFloat(editLength ? editLength.value : product.length_in) || product.length_in;
+        const w = parseFloat(editWidth ? editWidth.value : product.width_in) || product.width_in;
+        const h = parseFloat(editHeight ? editHeight.value : product.height_in) || product.height_in;
+
+        const newArea = 2 * (l * w + w * h + l * h);
+        const scale = newArea / origArea;
+
+        let unitPrice;
+        if (customMode) {
+          unitPrice = getUnitPriceForQty(activeQty, product, scale);
+        } else {
+          const origPrice = product.prices && product.prices[activeQty] ? product.prices[activeQty] : 0;
+          unitPrice = Math.max(origPrice * scale, 2.00 * activeQty) / activeQty;
+        }
+        const totalPrice = Math.round(unitPrice * activeQty);
+
+        const cartItemName = `${product.name} (Pack of ${activeQty})`;
+
+        if (typeof cart !== 'undefined') {
+          const existing = cart.find(item => item.name === cartItemName);
+          if (existing) {
+            existing.quantity += 1;
+          } else {
+            cart.push({ name: cartItemName, price: totalPrice, quantity: 1 });
+          }
+          if (typeof updateCartUI === 'function') updateCartUI();
+        }
+
+        if (typeof showToast === 'function') {
+          showToast(`🛒 ${cartItemName} added to Cart!`);
+        }
+
+        // Animate button briefly
+        addToCartBtn.classList.add('added');
+        const btnSpan = addToCartBtn.querySelector('span');
+        if (btnSpan) { btnSpan.textContent = 'Added!'; }
+        setTimeout(() => {
+          addToCartBtn.classList.remove('added');
+          if (btnSpan) { btnSpan.textContent = 'Add to Cart'; }
+        }, 1800);
+
+        // Open cart drawer
+        const cartDrawerEl = document.getElementById('cart-drawer');
+        if (cartDrawerEl && !cartDrawerEl.classList.contains('open')) {
+          cartDrawerEl.classList.add('open');
+        }
+      });
     }
 
     // Gallery Render

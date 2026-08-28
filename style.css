@@ -1923,13 +1923,15 @@ svg { display: block; }
   flex-direction: column;
   gap: 16px;
 }
+/* Track background rail */
 .range-slider-container {
   position: relative;
   height: 6px;
   background: var(--beige-dk);
   border-radius: 3px;
-  margin: 10px 0;
+  margin: 10px 8px; /* horizontal margin = half thumb width so thumb edges align with rail ends */
 }
+/* Filled portion between the two handles */
 .range-slider-track {
   position: absolute;
   height: 100%;
@@ -1937,20 +1939,40 @@ svg { display: block; }
   border-radius: 3px;
   left: 0%;
   right: 0%;
+  pointer-events: none;
 }
+/*
+  Wrapper that gives the stacked range inputs a real height so
+  position:absolute children are contained, then we shift it up
+  to sit centred over the 6px rail.
+*/
 .range-slider-input {
   position: relative;
+  height: 16px;        /* equal to thumb height */
+  margin: -19px 0 0;   /* pull up to align thumb centre with rail centre: -(10+6+3)px */
 }
 .range-slider-input input[type="range"] {
   position: absolute;
+  left: 0;
+  top: 0;
   width: 100%;
-  height: 6px;
-  top: -16px;
+  height: 16px;
   background: none;
   pointer-events: none;
   -webkit-appearance: none;
   appearance: none;
+  outline: none;
+  margin: 0;
+  padding: 0;
 }
+/* MIN handle sits below MAX handle in z-order */
+.range-slider-input input[type="range"]:first-child {
+  z-index: 3;
+}
+.range-slider-input input[type="range"]:last-child {
+  z-index: 4;
+}
+/* WebKit thumb */
 .range-slider-input input[type="range"]::-webkit-slider-thumb {
   height: 16px;
   width: 16px;
@@ -1962,10 +1984,28 @@ svg { display: block; }
   cursor: pointer;
   box-shadow: var(--shadow-xs);
   transition: transform var(--transition);
-  z-index: 10;
 }
 .range-slider-input input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
+}
+/* Firefox thumb */
+.range-slider-input input[type="range"]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 3px solid var(--brown);
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition);
+}
+.range-slider-input input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+/* Firefox track (transparent so our custom track shows through) */
+.range-slider-input input[type="range"]::-moz-range-track {
+  background: none;
 }
 .price-inputs {
   display: flex;

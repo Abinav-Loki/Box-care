@@ -584,18 +584,23 @@
             <i data-lucide="layers" style="left: 10px; position: absolute; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--brown); pointer-events: none;"></i>
             <select id="catalog-category-select" class="search-sidebar-input" style="padding-left: 34px; appearance: auto; cursor: pointer; font-weight: 600; color: var(--charcoal); background: var(--white);">
               <option value="all">All Product Types</option>
-              <option value="Flap Mailer Box">Flap Mailer Box</option>
-              <option value="Corrugated Shipping Box">Corrugated Shipping Box</option>
-              <option value="Rigid Premium Box">Rigid Premium Box</option>
-              <option value="Mono Folding Carton">Mono Folding Carton</option>
-              <option value="Packaging Accessories">Packaging Accessories</option>
+              <option value="mailer-boxes">Flap Mailer Box</option>
+              <option value="shipping-boxes">Corrugated Shipping Box</option>
+              <option value="custom-printed-boxes">Custom Printed Box</option>
+              <option value="mono-cartons">Mono Folding Carton</option>
+              <option value="corrugated-boxes">Corrugated Box</option>
+              <option value="pizza-boxes">Pizza Box</option>
+              <option value="courier-bags">Courier Bags</option>
+              <option value="paper-bags">Paper Bags</option>
+              <option value="tape-rolls">Tape Rolls</option>
+              <option value="bubble-wrap">Bubble Wrap</option>
+              <option value="corrugated-rolls">Corrugated Paper Roll</option>
+              <option value="corrugated-sheets">Corrugated Sheets</option>
             </select>
           </div>
 
-          <h4 class="filter-title" style="margin-top: 14px;"><i data-lucide="search" style="width: 15px; height: 15px;"></i> Search Product</h4>
-          <div class="search-input-wrap">
-            <i data-lucide="search"></i>
-            <input type="text" id="catalog-search" class="search-sidebar-input" placeholder="Search by name or size..." list="product-type-suggestions">
+          <div class="search-input-wrap" style="margin-top: 14px;">
+            <input type="text" id="catalog-search" class="search-sidebar-input" style="padding-left: 14px;" placeholder="Search by name or size..." list="product-type-suggestions">
             <datalist id="product-type-suggestions">
               <option value="Flap Mailer Box"></option>
               <option value="Corrugated Shipping Box"></option>

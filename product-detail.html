@@ -329,6 +329,41 @@
       color: var(--charcoal);
     }
     
+    /* Add to Cart button */
+    .action-btn-cart {
+      flex: 1.2;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #2e7d32, #43a047);
+      color: var(--white);
+      font-family: var(--font-head);
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 14px 24px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 4px 14px rgba(46,125,50,0.3);
+      text-decoration: none;
+    }
+
+    .action-btn-cart:hover {
+      background: linear-gradient(135deg, #1b5e20, #388e3c);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(46,125,50,0.4);
+    }
+
+    .action-btn-cart:active {
+      transform: translateY(0);
+    }
+
+    .action-btn-cart.added {
+      background: linear-gradient(135deg, #388e3c, #66bb6a);
+    }
+
     /* Action buttons bar */
     .actions-bar {
       display: flex;
@@ -497,10 +532,10 @@
   <div class="container">
     <!-- Back button -->
     <div class="back-to-categories-wrap" style="margin-bottom: 24px;">
-      <a href="products.html" class="back-category-btn" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 500; color: var(--brown); transition: var(--transition);">
+      <button onclick="history.back()" class="back-category-btn" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 500; color: var(--brown); transition: var(--transition); background: none; border: none; cursor: pointer; font-family: inherit; font-size: 1rem; padding: 0;">
         <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
         <span>Back to Products</span>
-      </a>
+      </button>
     </div>
 
     <!-- Main product detailed layout -->
@@ -572,7 +607,7 @@
             </table>
           </div>
 
-          <div>
+          <div id="pricing-table-wrap">
             <h3>Pricing Table</h3>
             <table class="detail-table">
               <thead>
@@ -599,6 +634,10 @@
 
         <!-- Action buttons -->
         <div class="actions-bar">
+          <button class="action-btn-cart" id="add-to-cart-btn">
+            <i data-lucide="shopping-cart"></i>
+            <span>Add to Cart</span>
+          </button>
           <a href="#" class="action-btn-primary" id="request-quote-btn">
             <i data-lucide="file-text"></i>
             <span>Request Quote</span>
