@@ -3689,3 +3689,21 @@ input:checked + .slider-round:before {
     grid-template-columns: 1fr;
   }
 }
+
+/* Stepper Preset Pill Buttons */
+.btn-preset-pill {
+  font-size: 0.78rem;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF !important;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-preset-pill:hover {
+  background: rgba(214, 138, 69, 0.2);
+  border-color: var(--orange);
+  color: #FFFFFF !important;
+}
+
