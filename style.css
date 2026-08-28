@@ -320,6 +320,7 @@ svg { display: block; }
   color: var(--charcoal-lt);
   text-decoration: none;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 .dropdown-item svg, .dropdown-item i {
   flex-shrink: 0;
