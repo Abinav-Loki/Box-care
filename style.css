@@ -3712,4 +3712,40 @@ input:checked + .slider-round:before {
   box-shadow: 0 0 10px rgba(214, 138, 69, 0.2);
 }
 
+/* Styled Back Button & Spacing Adjustments */
+.back-to-categories-wrap {
+  margin-top: -12px !important;  /* Shifts the back button slightly upwards */
+  margin-bottom: 24px !important;
+}
+.back-category-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: var(--white) !important;
+  border: 1.5px solid var(--beige-dk) !important;
+  color: var(--brown) !important;
+  font-family: inherit;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  border-radius: 30px !important; /* Premium capsule shape */
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition) !important;
+  text-decoration: none;
+}
+.back-category-btn:hover {
+  background: var(--orange-xl) !important;
+  border-color: var(--orange) !important;
+  color: var(--brown-dk) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-sm);
+}
+.back-category-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5px;
+}
+
+
 
